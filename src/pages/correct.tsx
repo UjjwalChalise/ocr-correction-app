@@ -1,31 +1,70 @@
+import { useState } from "react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { ScrollArea } from "../components/ui/scroll-area";
 import { HighlightedText } from "../components/highlighted-text";
-import { useOCRStore } from "../lib/store";
+import { useAppState } from "../lib/app-context";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Download, RefreshCw } from 'lucide-react';
+import { apiService } from "../lib/api";
 
 export default function CorrectPage() {
   const navigate = useNavigate();
-  const { uploadedImage, ocrText, correctedText, highlightedWords } = useOCRStore();
+  const { state, setTexts, setMetrics } = useAppState();
+  const [isSaving, setIsSaving] = useState(false);
+  const [isReprocessing, setIsReprocessing] = useState(false);
 
-  const handleSave = () => {
-    // For now, this does nothing as requested
-    console.log("Save clicked - functionality to be implemented");
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      // Simulate save operation
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log("Corrections saved successfully");
+      // Here you would typically save to a database or file
+    } catch (error) {
+      console.error("Save failed:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleExport = () => {
+    const correctedText = state.correctedText.map(segment => segment.text).join('');
+    const blob = new Blob([correctedText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'corrected-text.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleReprocess = async () => {
+    setIsReprocessing(true);
+    try {
+      const ocrText = state.ocrText.map(segment => segment.text).join('');
+      const result = await apiService.processOCRText(ocrText);
+      
+      setTexts(result.ocrSegments, result.correctedSegments);
+      setMetrics(result.werScore, result.cerScore, result.missSpelledWords);
+    } catch (error) {
+      console.error("Reprocessing failed:", error);
+    } finally {
+      setIsReprocessing(false);
+    }
   };
 
   const handleBack = () => {
     navigate("/");
   };
 
-  if (!uploadedImage) {
+  if (state.ocrText.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="p-6 text-center">
-          <p className="text-gray-600 mb-4">No image uploaded. Please go back to dashboard.</p>
+      <div className="error-page">
+        <Card className="error-card">
+          <p className="error-message">No text processed yet. Please go back to dashboard and process some text.</p>
           <Button onClick={handleBack}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft size={16} className="btn-icon" />
             Back to Dashboard
           </Button>
         </Card>
@@ -34,69 +73,128 @@ export default function CorrectPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto space-y-6">
+    <div className="correct-page">
+      <div className="correct-container">
+        <div className="correct-content">
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="correct-header">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Text Correction</h1>
-              <p className="text-gray-600">Review and correct OCR detection results</p>
+              <h1 className="correct-title">Text Correction</h1>
+              <p className="correct-subtitle">Review and manage OCR correction results</p>
             </div>
-            <Button variant="outline" onClick={handleBack}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Dashboard
-            </Button>
+            <div className="correct-actions">
+              <Button variant="outline" onClick={handleReprocess} disabled={isReprocessing}>
+                {isReprocessing ? (
+                  <>
+                    <RefreshCw size={16} className="btn-icon animate-spin" />
+                    Reprocessing...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw size={16} className="btn-icon" />
+                    Reprocess
+                  </>
+                )}
+              </Button>
+              <Button variant="outline" onClick={handleBack}>
+                <ArrowLeft size={16} className="btn-icon" />
+                Back to Dashboard
+              </Button>
+            </div>
           </div>
 
-          {/* Uploaded Image Display */}
+          {/* Metrics Summary */}
           <Card>
             <CardHeader>
-              <CardTitle>Uploaded Document</CardTitle>
+              <CardTitle>Correction Summary</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex justify-center">
-                <img
-                  src={uploadedImage || "/placeholder.svg"}
-                  alt="Uploaded document"
-                  className="max-w-full h-auto max-h-64 object-contain rounded border"
-                />
+              <div className="metrics-summary">
+                <div className="metric-item">
+                  <span className="metric-label">Word Error Rate:</span>
+                  <span className="metric-value text-red-600">{state.werScore}%</span>
+                </div>
+                <div className="metric-item">
+                  <span className="metric-label">Character Error Rate:</span>
+                  <span className="metric-value text-orange-600">{state.cerScore}%</span>
+                </div>
+                <div className="metric-item">
+                  <span className="metric-label">Corrections Made:</span>
+                  <span className="metric-value text-blue-600">{state.missSpelledWords}</span>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Text Correction Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* OCR Detection */}
-            <Card className="h-96">
+          {/* Uploaded Image Display */}
+          {state.uploadedImage && (
+            <Card>
               <CardHeader>
-                <CardTitle className="text-lg">OCR Detection</CardTitle>
+                <CardTitle>Source Document</CardTitle>
               </CardHeader>
-              <CardContent className="h-full pb-6">
-                <ScrollArea className="h-full pr-4">
-                  <HighlightedText text={ocrText} highlightedWords={highlightedWords} highlightColor="red" />
+              <CardContent>
+                <div className="image-display">
+                  <img
+                    src={state.uploadedImage || "/placeholder.svg"}
+                    alt="Uploaded document"
+                    className="document-image"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Text Correction Section */}
+          <div className="text-correction-grid">
+            {/* OCR Detection */}
+            <Card className="text-card">
+              <CardHeader>
+                <CardTitle className="text-card-title">
+                  Original OCR Text
+                  <span className="error-count">({state.missSpelledWords} errors)</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-card-content">
+                <ScrollArea className="text-scroll">
+                  <HighlightedText segments={state.ocrText} highlightColor="red" />
                 </ScrollArea>
               </CardContent>
             </Card>
 
-            {/* Corrected Word */}
-            <Card className="h-96">
+            {/* Corrected Text */}
+            <Card className="text-card">
               <CardHeader>
-                <CardTitle className="text-lg">Corrected Word</CardTitle>
+                <CardTitle className="text-card-title">
+                  Corrected Text
+                  <span className="correction-count">({state.missSpelledWords} corrections)</span>
+                </CardTitle>
               </CardHeader>
-              <CardContent className="h-full pb-6">
-                <ScrollArea className="h-full pr-4">
-                  <HighlightedText text={correctedText} highlightedWords={highlightedWords} highlightColor="green" />
+              <CardContent className="text-card-content">
+                <ScrollArea className="text-scroll">
+                  <HighlightedText segments={state.correctedText} highlightColor="green" />
                 </ScrollArea>
               </CardContent>
             </Card>
           </div>
 
-          {/* Save Button */}
-          <div className="flex justify-center">
-            <Button onClick={handleSave} size="lg" className="px-8 py-3 text-lg">
-              <Save className="w-5 h-5 mr-2" />
-              Save
+          {/* Action Buttons */}
+          <div className="action-buttons">
+            <Button onClick={handleExport} variant="outline" size="lg">
+              <Download size={20} className="btn-icon" />
+              Export Text
+            </Button>
+            <Button onClick={handleSave} size="lg" disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <RefreshCw size={20} className="btn-icon animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save size={20} className="btn-icon" />
+                  Save Corrections
+                </>
+              )}
             </Button>
           </div>
         </div>
