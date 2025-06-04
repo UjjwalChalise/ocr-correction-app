@@ -191,7 +191,6 @@ export function TiffViewer() {
                 <div className="upload-content">
                   <Upload size={48} className="upload-icon" />
                   <p className="upload-title">Upload a TIFF file to get started</p>
-                  <Button onClick={() => fileInputRef.current?.click()}>Choose File</Button>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -215,120 +214,10 @@ export function TiffViewer() {
             )}
           </div>
 
-          {/* Controls */}
-          <div className="controls-panel">
-            <Card>
-              <CardHeader>
-                <CardTitle className="control-title">File Controls</CardTitle>
-              </CardHeader>
-              <CardContent className="control-content">
-                <Button onClick={() => fileInputRef.current?.click()} className="w-full" variant="outline">
-                  <Upload size={16} className="btn-icon" />
-                  Upload TIFF
-                </Button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".tiff,.tif,.jpg,.jpeg,.png"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-
-                <div className="zoom-controls">
-                  <label className="control-label">Zoom</label>
-                  <div className="zoom-buttons">
-                    <Button size="sm" variant="outline" onClick={() => setScale((prev) => Math.max(0.1, prev - 0.1))}>
-                      -
-                    </Button>
-                    <span className="zoom-display">{Math.round(scale * 100)}%</span>
-                    <Button size="sm" variant="outline" onClick={() => setScale((prev) => Math.min(3, prev + 0.1))}>
-                      +
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="control-title">Highlighting</CardTitle>
-              </CardHeader>
-              <CardContent className="control-content">
-                <div className="label-input">
-                  <label className="control-label">Label</label>
-                  <input
-                    className="text-input"
-                    value={currentLabel}
-                    onChange={(e) => setCurrentLabel(e.target.value)}
-                    placeholder="Highlight label"
-                  />
-                </div>
-
-                <div className="color-picker">
-                  <label className="control-label">Color</label>
-                  <div className="color-grid">
-                    {colors.map((color) => (
-                      <button
-                        key={color}
-                        onClick={() => setCurrentColor(color)}
-                        className={`color-button ${currentColor === color ? 'selected' : ''}`}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </div>
       </div>
 
-      {/* Bottom Section - Highlights List */}
-      <div className="highlights-section">
-        <div className="highlights-content">
-          <div className="highlights-list">
-            <div className="highlights-header">
-              <h3 className="highlights-title">Highlights ({highlights.length})</h3>
-              <div className="highlights-actions">
-                <Button size="sm" variant="outline" onClick={exportHighlights}>
-                  <Download size={16} className="btn-icon" />
-                  Export
-                </Button>
-              </div>
-            </div>
-
-            <ScrollArea className="highlights-scroll">
-              <div className="highlights-items">
-                {highlights.map((highlight) => (
-                  <div key={highlight.id} className="highlight-item">
-                    <div className="highlight-color" style={{ backgroundColor: highlight.color }} />
-                    <div className="highlight-info">
-                      <div className="highlight-label">{highlight.label}</div>
-                      <div className="highlight-coords">
-                        {Math.round(highlight.x)}, {Math.round(highlight.y)} - {Math.round(highlight.width)}×{Math.round(highlight.height)}
-                      </div>
-                    </div>
-                    <div className="highlight-actions">
-                      <Button size="sm" variant="ghost" onClick={() => toggleHighlight(highlight.id)}>
-                        {highlight.visible ? <Eye size={16} /> : <EyeOff size={16} />}
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => deleteHighlight(highlight.id)}>
-                        <Trash2 size={16} />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-
-                {highlights.length === 0 && (
-                  <div className="no-highlights">
-                    No highlights yet. Click and drag on the image to create highlights.
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </div>
-        </div>
-      </div>
+     
     </div>
   )
 }
