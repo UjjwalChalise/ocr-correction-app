@@ -12,7 +12,7 @@ interface HighlightedTextProps {
 export function HighlightedText({text, highlightedWords, highlightColor }: HighlightedTextProps) {
   return (
     <div className="highlighted-text">
-      {highlightedWords.map((highlightedWords, index) => (
+      {highlightedWords?.map((highlightedWords, index) => (
         <span
           key={index}
           className={highlightedWords ? `highlight-${highlightColor}` : ''}
